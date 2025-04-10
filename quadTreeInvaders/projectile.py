@@ -53,13 +53,14 @@ class Beam:
         self.windup_time = profile["windup_time"]
         self.windup_const = profile["windup_time"]
         self.beam_lifetime = profile["beam_lifetime"]
-        self.base_image = profile["beam_base_image"]
+        self.base_image = profile["base_image"]
         self.beam_image = profile["beam_image"]
         self.hit_radius = profile["hit_radius"]
         self.damage = profile["damage"]
         rad = math.radians(angle)
         # self.turn_rate = turn_rate
         self.update_function = update_fuction 
+        self.draw_function = draw_function
         self.profile = profile
         self.sub_effect = sub_effect
         self.friendly = friendly
@@ -75,9 +76,9 @@ class Beam:
             elif self.beam_lifetime > 0:
                 self.beam_lifetime -= 1
 
-    def draw(self, screen):
+    def draw(self, beam, screen, source):
         if self.draw_function:
-            self.draw_function(screen, self)
+            self.draw_function(beam, screen, source)
         else:
             if self.windup_time > 0:
                 # Draw the windup effect

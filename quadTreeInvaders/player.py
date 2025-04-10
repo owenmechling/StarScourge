@@ -49,7 +49,7 @@ class Player:
         for projectile in self.projectiles:
             projectile.draw(screen)
         for beam in self.beams:
-            beam.draw(screen, self)
+            beam.draw(beam, screen, self)
         for weapon in self.weapons:
             weapon.screen_effect(screen)
 
@@ -97,9 +97,9 @@ class Player:
                 elif event.key == pygame.K_w:
                     self.weapons[1].trigger(self.x + self.width//2, self.y, 270, self.projectiles)
                 elif event.key == pygame.K_e:
-                    self.weapons[2].trigger(self.x + self.width//2, self.y, 0, self.projectiles)
+                    self.weapons[2].trigger(self.x + self.width//2, self.y, 270, self.projectiles)
                 elif event.key == pygame.K_r:
-                    self.weapons[3].trigger(self.x + self.width//2, self.y, 0, self.beams)
+                    self.weapons[3].trigger(self, 270, self.beams)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
             self.move(-10)

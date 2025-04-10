@@ -23,6 +23,7 @@ class profiles:
             "life_timer": 200,
             "sub_proj": None
         }
+
         self.HOMING_MISSILE = {
             "name": "missile",
             "image": assets["rocket"],
@@ -214,41 +215,40 @@ class laser:
         self.cooldown = 60
 
     def trigger(self, source, angle, beams):
-        if self.ammo > 0 and self.cooldown < 1: 
+        if self.cooldown < 1: 
             beams.append(Beam(source, angle, self.profile, draw_function=self.beam_draw_function))
-            assets["laserSound"].play()
+            self.profile["sound"].play()
             self.cooldown = self.profile["windup_time"]+self.profile["beam_lifetime"]+self.profile["beam_cooldown"]
 
     def update(self):
         if self.cooldown > 0:
             self.cooldown -= 1
-
-                        
-    def beam_draw_function(self, screen, source):
-        if self.windup_time > 0:
+      
+    def beam_draw_function(self, beam, screen, source):
+        if beam.windup_time > 0:
             # Draw the windup effect
-            progress = 1 - (self.windup_time / self.windup_const)
-            radius = int(self.profile["max_radius"] * progress)
+            progress = 1 - (beam.windup_time / beam.windup_const)
+            radius = int(beam.profile["max_radius"] * progress)
             surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
             pygame.draw.circle(surf, (0, 255, 255, 100), (radius, radius), radius)
-            screen.blit(surf, (self.x - radius, self.y - radius))
-        elif self.beam_lifetime > 0:
+            screen.blit(surf, (beam.x - radius, beam.y - radius))
+        elif beam.beam_lifetime > 0:
             # vibration effect based on time; tweak amplitude/frequency
             time_now = pygame.time.get_ticks()
-            vibration = int(2 * math.sin(time_now * 0.09 + self.stack_index))
+            vibration = int(2 * math.sin(time_now * 0.09 + beam.stack_index))
             x = source.x + vibration
             # Calculate vertical offset for stacking
-            vertical_offset = self.stack_index * 6
+            vertical_offset = beam.stack_index * 6
             # Draw the base image at the player's top, applying the vertical offset.
-            base_rect = self.base_image.get_rect(midbottom=(x, source.y - vertical_offset))
-            screen.blit(self.base_image, base_rect)
+            base_rect = beam.base_image.get_rect(midbottom=(x, source.y - vertical_offset))
+            screen.blit(beam.base_image, base_rect)
             # Draw the beam segments upward from the p layer's y position.
             start_y = source.y - 128
             end_y = -128  # adjust if needed to reach the top of the screen
-            beam_height = self.beam_image.get_height()
+            beam_height = beam.beam_image.get_height()
             for y in range(start_y, end_y, -beam_height):
-                beam_rect = self.beam_image.get_rect(midtop=(x, y))
-                screen.blit(self.beam_image, beam_rect)
+                beam_rect = beam.beam_image.get_rect(midtop=(x, y))
+                screen.blit(beam.beam_image, beam_rect)
        
     def screen_effect(self, screen):
         #flash_timer = 5
