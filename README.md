@@ -1,6 +1,6 @@
 # StarScourge
 
-A pixelized retro space shooter with many modernizations
+A pixelized retro space shooter pygame with many modernizations!
 
 NEW in StarScourge Rebuild!
 - Advanced weapons system
@@ -8,7 +8,7 @@ NEW in StarScourge Rebuild!
 - Double Quadtree Architecture Remains
 - Level based playstyle
 - Upraded sprites
-- 
+- Global Score Tracker
                  '
             *          .
                    *       '
