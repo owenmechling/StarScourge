@@ -1,4 +1,43 @@
-# Quadtree Invaders
+# StarScourge
 
-A project exploring spatial trees, and specifically a double Quadtree setup
-to track collisions for a space scrolling pixel game. 
+A pixelized retro space shooter with many modernizations
+
+NEW in StarScourge Rebuild!
+- Advanced weapons system
+- Refactored functionality
+- Double Quadtree Architecture Remains
+- Level based playstyle
+- Upraded sprites
+- 
+                 '
+            *          .
+                   *       '
+              *                *
+
+
+
+
+
+   *   '*
+           *
+                *
+                       *
+               *
+                     *
+
+         .                      .
+         .                      ;
+         :                  - --+- -
+         !           .          !
+         |        .             .
+         |_         +
+      ,  | `.
+--- --+-<#>-+- ---  --  -
+      `._|_,'
+         T
+         |
+         !
+         :         . : 
+         .       *
+
+Ojo
