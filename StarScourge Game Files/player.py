@@ -1,6 +1,6 @@
 from quadtree import Quadtree, Boundary, Point
 import utils
-from utils import SCREEN_WIDTH, SCREEN_HEIGHT
+from utils import SCREEN_WIDTH, SCREEN_HEIGHT, GameState
 import weapons
 from weapons import WEAPON_TYPES
 from projectile import projectiles_frame_update, beams_frame_update
@@ -62,7 +62,7 @@ class Player:
         return pygame.Rect(hitbox_x, hitbox_y, hitbox_width, hitbox_height)
 
     def on_hit(self, objects):
-        self.projectiles.append(Explosion(player.x, player.y, self.assets["shipExplosion"], duration=30))
+        self.projectiles.append(Explosion(Player.x, Player.y, self.assets["shipExplosion"], duration=30))
         self.assets["playerDeath"].play()  # Play player death sound
         pass
 
@@ -88,9 +88,9 @@ class Player:
         # --- Player Input Handling ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
-                print(game_state.game_over)
-                game_state.game_quit = True
-                game_state.game_over = True
+                print(GameState.game_over)
+                GameState.game_quit = True
+                GameState.game_over = True
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_q:
                     self.weapons[0].trigger(self.x + self.width//2, self.y, 270, self.projectiles)

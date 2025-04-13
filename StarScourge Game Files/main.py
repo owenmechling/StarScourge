@@ -11,7 +11,7 @@ def main():
     #Setup initial variables
     pygame.init()
     screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
-    pygame.display.set_caption("Quadtree Invaders")
+    pygame.display.set_caption("StarScourge")
     clock = pygame.time.Clock()
     asset_manager = utils.Assets()
     game_state = utils.GameState(asset_manager.assets)

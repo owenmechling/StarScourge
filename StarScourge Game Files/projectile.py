@@ -3,6 +3,7 @@ from utils import SCREEN_WIDTH, SCREEN_HEIGHT
 import utils
 import random
 import math
+import pygame
 
 class Projectile:
     def __init__(self, x, y, angle, profile, sub_proj=None, update_fuction=None, friendly=True):
