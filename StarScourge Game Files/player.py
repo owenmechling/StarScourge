@@ -2,13 +2,14 @@ from quadtree import Quadtree, Boundary, Point
 import utils
 from utils import SCREEN_WIDTH, SCREEN_HEIGHT, GameState
 import weapons
-from weapons import WEAPON_TYPES
-from projectile import projectiles_frame_update, beams_frame_update
+from weapons import WEAPON_TYPES, profiles 
+import projectile
+from projectile import projectiles_frame_update, beams_frame_update, Projectile 
 import random
 import pygame
 
 class Player:
-    def __init__(self, x, y, assets):
+    def __init__(self, x, y, assets, fx_manager, profiles):
         self.x, self.y = x, y
         self.frame = 0
         self.timer = 0
@@ -22,9 +23,11 @@ class Player:
         self.projectiles = []
         self.beams = []
         self.speed = 10
+        self.profiles = profiles
         profiles = weapons.profiles(assets)
         self.weapons = [weapons.machine_gun(profiles), weapons.homing_missile(profiles), weapons.shockwave(profiles), weapons.laser(profiles)]
         self.hull = 3
+        self.fx = fx_manager
 
 
     def move(self, dx):
@@ -62,7 +65,7 @@ class Player:
         return pygame.Rect(hitbox_x, hitbox_y, hitbox_width, hitbox_height)
 
     def on_hit(self, objects):
-        self.projectiles.append(Explosion(Player.x, Player.y, self.assets["shipExplosion"], duration=30))
+        self.projectiles.append(Projectile(self.x, self.y, 0, self.profiles.EXPLOSION))
         self.assets["playerDeath"].play()  # Play player death sound
         pass
 
@@ -84,7 +87,7 @@ class Player:
             if self.hull <= 0: 
                 game_state.game_over = True
 
-    def game_events(self, events):
+    def game_events(self, events, background):
         # --- Player Input Handling ---
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -102,6 +105,8 @@ class Player:
                     self.weapons[3].trigger(self, 270, self.beams)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_LEFT]:
+            self.fx.sway_left()
             self.move(-10)
         if keys[pygame.K_RIGHT]:
             self.move(10)
+            self.fx.sway_right()

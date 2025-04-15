@@ -5,7 +5,8 @@ import random
 import utils
 import baddies
 from player import Player
-from utils import SCREEN_WIDTH, SCREEN_HEIGHT
+from weapons import profiles
+from utils import SCREEN_WIDTH, SCREEN_HEIGHT, FXManager
 
 def main():
     #Setup initial variables
@@ -18,8 +19,11 @@ def main():
     background = utils.Background(asset_manager.assets)
     menus = utils.MenuScreens()
     hud_manager = utils.Hud()
-    player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70, asset_manager.assets)
+    fx = FXManager()
+    profile = profiles(asset_manager.assets)
+    player = Player(SCREEN_WIDTH // 2, SCREEN_HEIGHT - 70, asset_manager.assets, fx, profile)
     enemy_manager = baddies.Random_Spawner(asset_manager.assets)
+    
 
     # ---- Main Loop ----
     while game_state.game_quit == False:
@@ -30,10 +34,11 @@ def main():
             # setup background and HUD
             screen.fill((0, 0, 0))
             background.update()
-            screen.blit(background.bg_img, (0, int(background.bg_y)))
+            screen.blit(background.bg_img, (fx.bg_offset_x, background.bg_y))
+            #screen.blit(background.bg_img, (background.bg_x, background.bg_y))
             hud_manager.draw_hud(screen, game_state, player)
             # Update and draw player and player objects
-            player.game_events(pygame)
+            player.game_events(pygame, background)
             player.update(enemy_manager.enemies)
             player.draw(screen)
             # Update/Draw enemies and enemy projectiles/effects
@@ -44,6 +49,9 @@ def main():
             player.player_collision_check(enemy_manager.enemies+enemy_manager.enemy_projectiles, game_state)
             enemy_manager.proj_collision_check(player.projectiles, game_state)
             enemy_manager.beam_collision_check(player.beams, game_state)
+            # Update and draw FX
+            fx.update()
+            fx.draw(screen)
             # display and move to the next frame
             pygame.display.flip()
             clock.tick(60)

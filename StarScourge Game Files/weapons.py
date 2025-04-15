@@ -1,3 +1,4 @@
+import pygame
 import projectile
 from projectile import Projectile, Beam
 import utils
@@ -76,6 +77,7 @@ class profiles:
             "damage": 1,
             "scale": 1,
             "hit_radius": 32,
+            "max_radius": 100,
             "angle": 0,
             "sub_proj": None
         }
@@ -236,9 +238,10 @@ class laser:
             # vibration effect based on time; tweak amplitude/frequency
             time_now = pygame.time.get_ticks()
             vibration = int(2 * math.sin(time_now * 0.09 + beam.stack_index))
-            x = source.x + vibration
-            # Calculate vertical offset for stacking
-            vertical_offset = beam.stack_index * 6
+
+            x = source.x + 32 + vibration # shoot the beam from the center of the ship, which is 64x64 as are all
+            vertical_offset = beam.stack_index * 6 # Calculate vertical offset for stacking
+            
             # Draw the base image at the player's top, applying the vertical offset.
             base_rect = beam.base_image.get_rect(midbottom=(x, source.y - vertical_offset))
             screen.blit(beam.base_image, base_rect)

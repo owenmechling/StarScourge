@@ -1,4 +1,7 @@
 import pygame
+import random
+import math
+
 # *** Screen Settings ***
 SCREEN_WIDTH, SCREEN_HEIGHT = 800, 600
 
@@ -20,6 +23,7 @@ class Assets:
         "background": pygame.image.load("./assets/background.png"),
         "shipExplosion": pygame.image.load("./assets/shipExplosion.png"),
         "rocketExplosion": pygame.image.load("./assets/rocketExplosion.png"),
+        "gameOver": pygame.image.load("./assets/gameOverScreen.png"),
         "laserSound": pygame.mixer.Sound("./assets/laserSound.mp3"),
         "rocketLaunch": pygame.mixer.Sound("./assets/rocketLaunch.mp3"),
         "basicAttack": pygame.mixer.Sound("./assets/basicAttack.mp3"),
@@ -29,7 +33,10 @@ class Assets:
         "rocketDeath": pygame.mixer.Sound("./assets/rocketDeath.mp3"),
         "backgroundMusic": pygame.mixer.Sound("./assets/backgroundMusic.mp3"),
         "backgroundMusicFile": "./assets/backgroundMusic.mp3"
+        
         }
+
+        self.font = pygame.font.Font("./assets/BlockCraft.otf", 24)
 
 # *** Game State Settings ***
 class GameState:
@@ -90,9 +97,12 @@ class Background:
     def __init__(self, assets):
         self.bg_img = assets["background"].convert()
         self.bg_height = self.bg_img.get_height()
+        self.bg_width = self.bg_img.get_width()
         self.bg_y = -(self.bg_height - SCREEN_HEIGHT)
-        self.bg_scroll_speed = 0.3
+        self.bg_x = (self.bg_width - SCREEN_WIDTH) // 2
+        self.bg_scroll_speed = 0.2
         self.scrolling_done = False
+
 
     def update(self):
         if not self.scrolling_done:
@@ -104,7 +114,7 @@ class Background:
 class Hud:
     def draw_hud(self, screen, game_state, player):
         # --- HUD ---
-        font = pygame.font.SysFont(None, 24)
+        font = pygame.font.Font("./assets/BlockCraft.otf", 24)
         #TODO math
         # for weapon in player.weapons:
         #     weapon_text = weapon.hud_text()
@@ -124,3 +134,64 @@ class Hud:
         screen.blit(kill_text, (10, 70))
 
 
+class FXManager:
+    def __init__(self):
+        self.flash_duration = 0 
+        self.flash_color = (255, 255, 255) #default white
+        self.shake_duration = 0
+        self.shake_intensity = 0
+        self.offset = pygame.Vector2(0, 0)
+        self.sway_offset = 0
+        self.bg_center_offset = -100
+        self.bg_offset_decay = 1
+        self.bg_offset_max = 30
+        self.bg_offset_x = -100
+        self.drift_speed = 0.7
+
+    def flash(self, duration=3, color=(255, 255, 255)):
+        self.flash_duration = duration
+        self.flash_color = color
+
+    def shake(self, duration=10, intensity=5):
+        self.shake_duration = duration
+        self.shake_intensity = intensity
+
+    def sway_left(self):
+        self.bg_offset_x = max(self.bg_center_offset - self.bg_offset_max, self.bg_offset_x - self.drift_speed)
+
+    def sway_right(self):
+        self.bg_offset_x = min(self.bg_center_offset + self.bg_offset_max, self.bg_offset_x + self.drift_speed)
+
+
+
+    def update(self):
+        # Handle screen shake logic
+        if self.shake_duration > 0:
+            self.shake_duration -= 1
+            self.offset.x = random.randint(-self.shake_intensity, self.shake_intensity)
+            self.offset.y = random.randint(-self.shake_intensity, self.shake_intensity)
+        else:
+            self.offset = pygame.Vector2(0, 0)
+
+        # Handle flash fade
+        if self.flash_duration > 0:
+            self.flash_duration -= 1
+        
+        # Background sway decay logic
+       # if self.bg_offset_x > self.bg_center_offset:
+        #    self.bg_offset_x = max(self.bg_center_offset, self.bg_offset_x - self.bg_offset_decay)
+        #elif self.bg_offset_x < self.bg_center_offset:
+         #   self.bg_offset_x = min(self.bg_center_offset, self.bg_offset_x + self.bg_offset_decay)
+
+
+
+        
+    def apply_offset(self, pos):
+        return (pos[0] + self.offset.x, pos[1] + self.offset.y)
+
+    def draw(self, screen):
+        if self.flash_duration > 0:
+            overlay = pygame.Surface(screen.get_size())
+            overlay.fill(self.flash_color)
+            overlay.set_alpha(180)
+            screen.blit(overlay, (0, 0))
