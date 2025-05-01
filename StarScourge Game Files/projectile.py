@@ -26,6 +26,7 @@ class Projectile:
         self.friendly = friendly
         self.target = None
         self.turn_rate = 0
+        self.fade = 255  # For explosion fade-out
 
     def update(self, targets=None):
         if self.update_function:
@@ -34,12 +35,50 @@ class Projectile:
             self.x += self.vx
             self.y += self.vy
             self.life_timer -= 1
+        if self.name == "explosion":
+            # Fade out explosion alpha as it expires
+            if self.life_timer > 0:
+                self.fade = int(255 * (self.life_timer / self.profile["life_timer"]))
+            else:
+                self.fade = 0
 
     def draw(self, screen):
-        screen.blit(self.image, (self.x*self.scale, self.y*self.scale))
+        if self.image is None:
+            return  # Don't attempt to draw if image is not set
+        if self.name == "shockwave":
+            # Center the shockwave as it grows
+            scaled_size = int(self.image.get_width() * self.scale), int(self.image.get_height() * self.scale)
+            scaled_img = pygame.transform.scale(self.image, scaled_size)
+            center_x = self.x + self.image.get_width() // 2
+            center_y = self.y + self.image.get_height() // 2
+            draw_x = center_x - scaled_img.get_width() // 2
+            draw_y = center_y - scaled_img.get_height() // 2
+            # Draw the image (optional, for texture)
+            screen.blit(scaled_img, (draw_x, draw_y))
+            # Draw a visible expanding circle overlay for the shockwave
+            radius = int((self.image.get_width() * self.scale) / 2)
+            surf = pygame.Surface((radius * 2, radius * 2), pygame.SRCALPHA)
+            pygame.draw.circle(surf, (0, 200, 255, 90), (radius, radius), radius)
+            pygame.draw.circle(surf, (255, 255, 255, 120), (radius, radius), max(1, radius - 8), 4)
+            screen.blit(surf, (center_x - radius, center_y - radius))
+        elif self.name == "explosion":
+            # Fade out explosion
+            img = self.image.copy()
+            img.set_alpha(self.fade)
+            screen.blit(img, (self.x, self.y))
+        else:
+            screen.blit(self.image, (self.x, self.y))
 
     def get_rect(self):
-        return self.image.get_rect(topleft=(self.x, self.y))
+        if self.name == "shockwave":
+            scaled_size = int(self.image.get_width() * self.scale), int(self.image.get_height() * self.scale)
+            center_x = self.x + self.image.get_width() // 2
+            center_y = self.y + self.image.get_height() // 2
+            draw_x = center_x - scaled_size[0] // 2
+            draw_y = center_y - scaled_size[1] // 2
+            return pygame.Rect(draw_x, draw_y, scaled_size[0], scaled_size[1])
+        else:
+            return self.image.get_rect(topleft=(self.x, self.y))
 
     def expired(self):
         return self.life_timer <= 0
@@ -107,31 +146,50 @@ class Beam:
                     screen.blit(self.beam_image, beam_rect)
 
     def get_rect(self):
-        x = self.player.x + self.player.width // 2
+        x = self.source.x + self.source.width // 2
         width = self.beam_image.get_width()
-        return pygame.Rect(x - width // 2, 0, width, 600)
+        # Start at y = -100, height = SCREEN_HEIGHT + 200 (to cover the whole screen and 100px above)
+        return pygame.Rect(x - width // 2, 0, width, SCREEN_HEIGHT + 200)
+
+    def get_segment_rects(self):
+        # Returns a list of rects for each beam segment as drawn
+        rects = []
+        time_now = pygame.time.get_ticks()
+        vibration = int(2 * math.sin(time_now * 0.09 + self.stack_index))
+        x = self.source.x + self.source.width // 2 + vibration
+        vertical_offset = self.stack_index * 6
+        base_y = self.source.y - vertical_offset
+        width = self.beam_image.get_width()
+        height = self.beam_image.get_height()
+        # Draw segments upward from the player's y position
+        start_y = base_y - 128
+        end_y = -128  # adjust if needed to reach the top of the screen
+        for y in range(start_y, end_y, -height):
+            rect = pygame.Rect(x - width // 2, y, width, height)
+            rects.append(rect)
+        return rects
 
     def expired(self):
         return self.beam_lifetime <= 0
 
 def projectiles_frame_update(projectiles, targets=None):
-    for projectile in projectiles:
+    for projectile in projectiles[:]:  # Iterate over a copy for safe removal
         projectile.update(targets)
         if projectile.expired():
             projectiles.remove(projectile)
             if projectile.sub_proj:
-                sub_proj.x = projectile.x
-                sub_proj.y = projectile.y
-                sub_proj.angle = projectile.angle
-                projectiles.append(sub_proj)
+                projectile.sub_proj.x = projectile.x
+                projectile.sub_proj.y = projectile.y
+                projectile.sub_proj.angle = projectile.angle
+                projectiles.append(projectile.sub_proj)
 
 def beams_frame_update(beams, targets=None):
-    for beam in beams:
+    for beam in beams[:]:  # Iterate over a copy for safe removal
         beam.update(targets)
         if beam.expired():
             beams.remove(beam)
             # if beam.sub_proj:
-            #     sub_proj.x = beam.x
-            #     sub_proj.y = beam.y
-            #     sub_proj.angle = beam.angle
-            #     beams.append(sub_proj)
+            #     beam.sub_proj.x = beam.x
+            #     beam.sub_proj.y = beam.y
+            #     beam.sub_proj.angle = beam.angle
+            #     beams.append(beam.sub_proj)

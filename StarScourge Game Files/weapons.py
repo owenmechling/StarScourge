@@ -14,14 +14,15 @@ class profiles:
     def __init__(self, assets):
         self.EXPLOSION = {
             "name": "explosion",
-            "image": assets["rocketExplosion"],
+            # Will be set dynamically on use
+            "image": None,
             "damage": 0,
             "scale": 1,
             "speed": 0,
             "hit_radius": 0,
             "angle": 0,
             "angle_variance": 15,
-            "life_timer": 200,
+            "life_timer": 30,
             "sub_proj": None
         }
 
@@ -29,41 +30,44 @@ class profiles:
             "name": "missile",
             "image": assets["rocket"],
             "sound": assets["rocketLaunch"],
-            "damage": 1,
+            "damage": 25,
             "scale": 1,
             "speed": 3,
             "hit_radius": 32,
             "angle": 0,
             "angle_variance": 15,
             "life_timer": 200,
-            "sub_proj": self.EXPLOSION
+            "sub_proj": self.EXPLOSION,
+            "piercing": False  # No piercing by default
         }
         self.SHOCKWAVE = {
             "name": "shockwave",
             "image": assets["shockwave"],
             "base_image": assets["shockwave"],
             "sound": assets["shockwaveSound"],
-            "damage": 1,
+            "damage": 100,
             "scale": 1,
             "scaling": 1.1,
             "speed": 0,
             "hit_radius": 64,
             "angle": 0,
             "life_timer": 200,
-            "sub_proj": None
+            "sub_proj": None,
+            "piercing": True  # Always piercing
         }
         self.BULLET = {
             "name": "bullet",
             "image": assets["bullet"],
             "sound": assets["basicAttack"],
-            "damage": 1,
+            "damage": 5,
             "scale": 1,
             "speed": 5,
             "hit_radius": 32,
             "angle": 0,
             "angle_variance": 15,
             "life_timer": 200,
-            "sub_proj": None
+            "sub_proj": None,
+            "piercing": False  # No piercing by default
         }
         self.LASER = {
             "name": "laser",
@@ -74,7 +78,7 @@ class profiles:
             "beam_lifetime": 300,
             "beam_cooldown": 60,
             "sound": assets["laserSound"],
-            "damage": 1,
+            "damage": 20,
             "scale": 1,
             "hit_radius": 32,
             "max_radius": 100,
@@ -90,12 +94,14 @@ class homing_missile:
         self.profile = profiles.HOMING_MISSILE
         self.cooldown = cooldown
 
-    def trigger(self, x, y, angle, projectiles):
+    def trigger(self, x, y, angle, projectiles, game_state=None):
         if self.ammo > 0 and self.cooldown < 1: 
             explosion = Projectile(x-self.profile["image"].get_width()// 2, y, angle, self.profile["sub_proj"])
             #projectiles.append(Projectile(x-self.profile["image"].get_width()// 2, y, angle, self.profile, update_fuction=self.projectile_update_function))
             #projectiles.append(Projectile(x-self.profile["image"].get_width()// 2, y, angle+5, self.profile, update_fuction=self.projectile_update_function))
             projectiles.append(Projectile(x-self.profile["image"].get_width()// 2, y, angle-5, self.profile, update_fuction=self.projectile_update_function))
+            if game_state is not None:
+                self.profile["sound"].set_volume(game_state.sfx_volume)
             self.profile["sound"].play()
             self.ammo -= 1
             self.cooldown = 10
@@ -108,7 +114,6 @@ class homing_missile:
         # Decrease the life timer
         projectile.life_timer -= 1
         if projectile.life_timer <= 0:
-            projectile.exploded = True
             return  # Skip further updates if time is up
 
         # Acquire a target if we don't have one
@@ -149,35 +154,60 @@ class homing_missile:
         return self.image.get_rect(topleft=(self.x, self.y))
 
     def hud_text(self):
-        return f"Missles: {self.ammo}"
+        return f": {self.ammo}"
 
 class shockwave:
-    def __init__(self, profiles, cooldown=5):
+    def __init__(self, profiles, cooldown=60):
         self.type = WEAPON_TYPES["projectile"]
         self.cooldown = cooldown
-        self.last_shot = cooldown
-        self.profile = profiles.SHOCKWAVE
+        self.last_shot = 0  # Allow immediate firing on game start
+        self.profile = profiles.SHOCKWAVE.copy()
         self.radius = 0
+        # Dramatic shockwave: bigger, longer, slower
+        self.profile["scale"] = 2.0  # Start at double size
+        self.profile["scaling"] = 1.07  # Expand even slower
+        self.profile["life_timer"] = 80  # Last longer
+        self.max_radius = 250  # Hitbox expands to 250px
 
-    def trigger(self, x, y, angle, projectiles):
-        if self.ammo > 0 and self.last_shot < 1: 
-            projectiles.append(Projectile(x-self.profile["image"].get_width()// 2, y, angle, self.profile, update_fuction=self.projectile_update_function))
+    def trigger(self, player, angle, projectiles, game_state=None):
+        if self.last_shot < 1:
+            # Center top of player image
+            x = player.x + player.image.get_width() // 2 - self.profile["image"].get_width() // 2
+            y = player.y + player.image.get_height() // 2 - self.profile["image"].get_height() // 2
+            if game_state is not None:
+                self.profile["sound"].set_volume(game_state.sfx_volume)
             self.profile["sound"].play()
-            self.last_shot == self.cooldown
+            # Create the shockwave projectile with initial scale so it starts at player size
+            shockwave_proj = Projectile(x, y, angle, self.profile, update_fuction=self.projectile_update_function)
+            shockwave_proj.scale = self.profile["scale"]
+            projectiles.append(shockwave_proj)
+            self.last_shot = self.cooldown
 
     def update(self):
         if self.last_shot > 0:
             self.last_shot -= 1
 
-    def projectile_update_function(self):
-        self.scale *= self.profile["scaling"]
-        self.life_timer -= 1
+    def projectile_update_function(self, projectile, targets=None):
+        # Make the shockwave expand to a larger radius, then expire
+        if not hasattr(projectile, "radius"):
+            projectile.radius = (projectile.image.get_width() * projectile.scale) / 2
+        max_radius = getattr(self, "max_radius", 250)
+        if projectile.radius < max_radius:
+            # Expand the shockwave smoothly
+            projectile.scale *= self.profile["scaling"]
+            projectile.radius = (projectile.image.get_width() * projectile.scale) / 2
+        else:
+            projectile.life_timer = 0  # Expire the projectile
+        projectile.life_timer -= 1
 
     def hud_text(self):
-        return f"Shockwave Cooldown: {self.cooldown}"
+        # Show the actual cooldown remaining, or READY
+        if self.last_shot > 0:
+            return f" Cooldown: {int(self.last_shot)}"
+        else:
+            return ": READY"
 
     def screen_effect(self, screen):
-        #flash_timer = 5
         return
 
 class machine_gun:
@@ -188,10 +218,12 @@ class machine_gun:
         self.cooldown = cooldown
         self.last_shot = cooldown
 
-    def trigger(self, x, y, angle, projectiles):
+    def trigger(self, x, y, angle, projectiles, game_state=None):
         if self.ammo > 0 and self.last_shot < 1: 
-            projectiles.append(Projectile(x-self.profile["image"].get_width()// 2, y, angle, self.profile, update_fuction=self.projectile_update_function))
+            if game_state is not None:
+                self.profile["sound"].set_volume(game_state.sfx_volume)
             self.profile["sound"].play()
+            projectiles.append(Projectile(x-self.profile["image"].get_width()// 2, y, angle, self.profile, update_fuction=self.projectile_update_function))
             self.ammo -= 1
             self.last_shot = self.cooldown
 
@@ -208,7 +240,7 @@ class machine_gun:
         return
 
     def hud_text(self):
-        return f"MG Ammo: {self.ammo}"
+        return f": {self.ammo}"
 
 class laser:
     def __init__(self, profiles):
@@ -216,8 +248,10 @@ class laser:
         self.type = WEAPON_TYPES["beam"]
         self.cooldown = 60
 
-    def trigger(self, source, angle, beams):
+    def trigger(self, source, angle, beams, game_state=None):
         if self.cooldown < 1: 
+            if game_state is not None:
+                self.profile["sound"].set_volume(game_state.sfx_volume)
             beams.append(Beam(source, angle, self.profile, draw_function=self.beam_draw_function))
             self.profile["sound"].play()
             self.cooldown = self.profile["windup_time"]+self.profile["beam_lifetime"]+self.profile["beam_cooldown"]
@@ -258,6 +292,9 @@ class laser:
         return
 
     def hud_text(self):
-        return f"Laser Cooldown: {self.cooldown}"
+        if self.cooldown > 0:
+            return f"Cooldown: {int(self.cooldown)}"
+        else:
+            return "READY"
 
 
